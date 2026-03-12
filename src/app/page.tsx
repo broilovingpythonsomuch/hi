@@ -2217,7 +2217,7 @@ export default function ClassManagementPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} Class 7.3. All rights reserved.</p>
             <p className="flex items-center gap-1">
-              Made with <Sparkles className="w-4 h-4 text-violet-500" /> for education
+              Made By <b>Keenan Yumaza Veda :P</b>
             </p>
           </div>
         </div>
