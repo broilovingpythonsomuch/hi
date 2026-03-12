@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
         role: "MEMBER",
         emailVerified: false,
         verificationToken,
+        verificationCode,
         tokenExpiry,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sanitizedEmail}`,
       },

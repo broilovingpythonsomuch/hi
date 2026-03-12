@@ -34,6 +34,9 @@ import {
   Loader2,
   Key,
   RefreshCw,
+  Chrome,
+  Github,
+  Facebook,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -389,7 +392,53 @@ export default function ClassManagementPage() {
               )}
 
               {authMode === "login" && (
-                <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-4">
+                  {/* Social Login Buttons */}
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => signIn("google", { callbackUrl: "/" })}
+                      disabled={isLoading}
+                    >
+                      <Chrome className="w-4 h-4 mr-2" />
+                      Continue with Google
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => signIn("github", { callbackUrl: "/" })}
+                      disabled={isLoading}
+                    >
+                      <Github className="w-4 h-4 mr-2" />
+                      Continue with GitHub
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => signIn("facebook", { callbackUrl: "/" })}
+                      disabled={isLoading}
+                    >
+                      <Facebook className="w-4 h-4 mr-2" />
+                      Continue with Facebook
+                    </Button>
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Or continue with email
+                      </span>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <div className="relative">
@@ -439,36 +488,58 @@ export default function ClassManagementPage() {
                       </>
                     )}
                   </Button>
+                </form>
+                </div>
+              )}
 
-                  <div className="relative my-6">
+              {authMode === "signup" && (
+                <div className="space-y-4">
+                  {/* Social Signup Buttons */}
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => signIn("google", { callbackUrl: "/" })}
+                      disabled={isLoading}
+                    >
+                      <Chrome className="w-4 h-4 mr-2" />
+                      Sign up with Google
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => signIn("github", { callbackUrl: "/" })}
+                      disabled={isLoading}
+                    >
+                      <Github className="w-4 h-4 mr-2" />
+                      Sign up with GitHub
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => signIn("facebook", { callbackUrl: "/" })}
+                      disabled={isLoading}
+                    >
+                      <Facebook className="w-4 h-4 mr-2" />
+                      Sign up with Facebook
+                    </Button>
+                  </div>
+
+                  <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <Separator />
+                      <span className="w-full border-t" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white dark:bg-slate-900 px-2 text-muted-foreground">
-                        Or
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Or sign up with email
                       </span>
                     </div>
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setAuthMode("signup");
-                      setError("");
-                      setSuccess("");
-                    }}
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Create New Account
-                  </Button>
-                </form>
-              )}
-
-              {authMode === "signup" && (
-                <form onSubmit={handleSignup} className="space-y-4">
+                  <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
                     <div className="relative">
@@ -568,6 +639,7 @@ export default function ClassManagementPage() {
                     Back to Sign In
                   </Button>
                 </form>
+                </div>
               )}
 
               {authMode === "verify" && (

@@ -1,5 +1,8 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import GitHubProvider from "next-auth/providers/github";
+import FacebookProvider from "next-auth/providers/facebook";
 import { db } from "./db";
 import { verifyPassword } from "./crypto";
 
@@ -37,6 +40,18 @@ declare module "next-auth/jwt" {
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_ID!,
+      clientSecret: process.env.GITHUB_SECRET!,
+    }),
+    FacebookProvider({
+      clientId: process.env.FACEBOOK_CLIENT_ID!,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -49,7 +64,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Normalize email to lowercase
-        const email = credentials.email.toLowerCase().trim();
+        const email = (credentials.email as string).toLowerCase().trim();
 
         const user = await db.user.findUnique({
           where: { email },
@@ -61,7 +76,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const passwordMatch = verifyPassword(credentials.password, user.password);
+        const passwordMatch = verifyPassword(credentials.password as string, user.password);
 
         if (!passwordMatch) {
           return null;
@@ -79,7 +94,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.name = user.name;
@@ -100,6 +115,43 @@ export const authOptions: NextAuthOptions = {
         session.user.emailVerified = token.emailVerified;
       }
       return session;
+    },
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "credentials") {
+        return true;
+      }
+
+      // For OAuth providers, create or update user
+      if (account && user.email) {
+        const existingUser = await db.user.findUnique({
+          where: { email: user.email.toLowerCase() },
+        });
+
+        if (existingUser) {
+          // Update existing OAuth user
+          await db.user.update({
+            where: { id: existingUser.id },
+            data: {
+              avatar: user.image || existingUser.avatar,
+              emailVerified: true, // OAuth users are pre-verified
+            },
+          });
+        } else {
+          // Create new OAuth user
+          await db.user.create({
+            data: {
+              email: user.email.toLowerCase(),
+              name: user.name || "User",
+              password: "", // OAuth users don't have passwords
+              role: "MEMBER",
+              avatar: user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`,
+              emailVerified: true, // OAuth users are pre-verified
+            },
+          });
+        }
+      }
+
+      return true;
     },
   },
   pages: {

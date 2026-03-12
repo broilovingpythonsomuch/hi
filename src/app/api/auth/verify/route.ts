@@ -39,11 +39,8 @@ export async function POST(request: NextRequest) {
 
     if (token && user.verificationToken === token) {
       isValid = true;
-    } else if (code) {
-      // For this demo, we'll use a simple verification
-      // In production, you'd store the verification code in the database
-      // For now, we'll accept any 6-digit code for demo purposes
-      isValid = /^\d{6}$/.test(code);
+    } else if (code && user.verificationCode === code) {
+      isValid = true;
     }
 
     if (!isValid) {
@@ -66,6 +63,7 @@ export async function POST(request: NextRequest) {
       data: {
         emailVerified: true,
         verificationToken: null,
+        verificationCode: null,
         tokenExpiry: null,
       },
     });
@@ -123,6 +121,7 @@ export async function PUT(request: NextRequest) {
       where: { id: user.id },
       data: {
         verificationToken,
+        verificationCode,
         tokenExpiry,
       },
     });
