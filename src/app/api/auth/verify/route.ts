@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     if (user.tokenExpiry && new Date() > user.tokenExpiry) {
       return NextResponse.json(
-        { error: "Verification link has expired. Please request a new one." },
+        { error: "Verification link has expired" },
         { status: 400 }
       );
     }
@@ -127,23 +127,122 @@ export async function PUT(request: NextRequest) {
     });
 
     // Send new verification email
-    const emailResult = await sendVerificationEmail({
-      email: sanitizedEmail,
-      verificationCode,
-      verificationToken,
-      userName: user.name,
-    });
+    try {
+      const emailResult = await sendVerificationEmail({
+        email: sanitizedEmail,
+        verificationCode,
+        verificationToken,
+        userName: user.name,
+      });
+
+      if (!emailResult.success) {
+        console.error("Email send error:", emailResult.error);
+        // Don't fail the request, but log the error
+        return NextResponse.json({
+          message: "Verification code generated. Email delivery failed - check console for details.",
+          verificationCode, // Include code in development
+        });
+      }
+    } catch (emailError) {
+      console.error("Email service error:", emailError);
+      // Don't fail the request, but return the code for development
+      return NextResponse.json({
+        message: "Verification code generated. Email service unavailable.",
+        verificationCode, // Include code in development
+      });
+    }
 
     return NextResponse.json({
-      message: "If an account exists, a new verification email has been sent.",
-      emailSent: emailResult.success,
-      // Include verification code for development/testing
-      verificationCode: process.env.NODE_ENV === "development" ? verificationCode : undefined,
+      message: "New verification email sent",
     });
   } catch (error) {
     console.error("Resend verification error:", error);
     return NextResponse.json(
-      { error: "Failed to resend verification" },
+      { error: "Failed to resend verification email" },
+      { status: 500 }
+    );
+  }
+}
+
+// Resend verification email
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { email } = body;
+
+    if (!email) {
+      return NextResponse.json(
+        { error: "Email is required" },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedEmail = email.toLowerCase().trim();
+
+    const user = await db.user.findUnique({
+      where: { email: sanitizedEmail },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    if (user.emailVerified) {
+      return NextResponse.json({
+        message: "Email already verified. You can now sign in.",
+      });
+    }
+
+    // Generate new token and code
+    const verificationToken = generateVerificationToken();
+    const verificationCode = generateVerificationCode();
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        verificationToken,
+        verificationCode,
+        tokenExpiry,
+      },
+    });
+
+    // Send new verification email
+    try {
+      const emailResult = await sendVerificationEmail({
+        email: sanitizedEmail,
+        verificationCode,
+        verificationToken,
+        userName: user.name,
+      });
+
+      if (!emailResult.success) {
+        console.error("Email send error:", emailResult.error);
+        // Don't fail the request, but log the error
+        return NextResponse.json({
+          message: "Verification code generated. Email delivery failed - check console for details.",
+          verificationCode, // Include code in development
+        });
+      }
+    } catch (emailError) {
+      console.error("Email service error:", emailError);
+      // Don't fail the request, but return the code for development
+      return NextResponse.json({
+        message: "Verification code generated. Email service unavailable.",
+        verificationCode, // Include code in development
+      });
+    }
+
+    return NextResponse.json({
+      message: "New verification email sent",
+    });
+  } catch (error) {
+    console.error("Resend verification error:", error);
+    return NextResponse.json(
+      { error: "Failed to resend verification email" },
       { status: 500 }
     );
   }

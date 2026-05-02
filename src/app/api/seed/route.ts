@@ -5,8 +5,8 @@ import { hashPassword, generateVerificationToken } from "@/lib/crypto";
 export async function GET() {
   try {
     // Check if already seeded
-    const existingUsers = await db.user.count();
-    if (existingUsers > 0) {
+    const existingClasses = await db.classInfo.count();
+    if (existingClasses > 0) {
       return NextResponse.json({ message: "Database already seeded" });
     }
 
@@ -36,6 +36,32 @@ export async function GET() {
       },
     });
 
+    // Create bendahara user
+    const bendaharaPassword = hashPassword("bendahara123");
+    const bendahara = await db.user.create({
+      data: {
+        name: "Ahmad Bendahara",
+        email: "bendahara@class73.com",
+        password: bendaharaPassword,
+        role: "BENDAHARA",
+        emailVerified: true,
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=bendahara",
+      },
+    });
+
+    // Create sekretaris user
+    const sekretarisPassword = hashPassword("sekretaris123");
+    const sekretaris = await db.user.create({
+      data: {
+        name: "Siti Sekretaris",
+        email: "sekretaris@class73.com",
+        password: sekretarisPassword,
+        role: "SEKRETARIS",
+        emailVerified: true,
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sekretaris",
+      },
+    });
+
     // Create sample member (unverified for demo)
     const memberToken = generateVerificationToken();
     const memberPassword = hashPassword("member123");
@@ -48,318 +74,197 @@ export async function GET() {
         emailVerified: false,
         verificationToken: memberToken,
         tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=member",
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=demomember",
       },
     });
 
-    // Create students - Class 7.3
-    const studentData = [
-      { name: "Ahmad Fakih Alkhoir", gender: "Male" },
-      { name: "Alif Rafandra Isrian", gender: "Male" },
-      { name: "Andi Naidah Aksa", gender: "Female" },
-      { name: "Anggia Meisya", gender: "Female" },
-      { name: "Annisa Tri Wulandari", gender: "Female" },
-      { name: "Aqila Ruzannah", gender: "Female" },
-      { name: "Athaya Haruki Zhafran", gender: "Male" },
-      { name: "Awra Dewi", gender: "Female" },
-      { name: "Bintang Frizidan H F S", gender: "Male" },
-      { name: "Boy Eins Alvian", gender: "Male" },
-      { name: "Bunga Fatimah Damero H", gender: "Female" },
-      { name: "Dino Abdul Rahmat", gender: "Male" },
-      { name: "Diva Azzahra", gender: "Female" },
-      { name: "Haikal Dwi Indriadi", gender: "Male" },
-      { name: "Imam Fazil Alfarez", gender: "Male" },
-      { name: "Jaya Yose Multi Arta", gender: "Male" },
-      { name: "Keenan Yumaza Veda", gender: "Male" },
-      { name: "Khalisa Aliya Winata", gender: "Female" },
-      { name: "Khansa Alya Hasan", gender: "Female" },
-      { name: "M Abid Muzakki", gender: "Male" },
-      { name: "M. Eshan Arsyad", gender: "Male" },
-      { name: "Nadia Zahra Arin", gender: "Female" },
-      { name: "Nasywah Siti Raisah", gender: "Female" },
-      { name: "Raffa Zaidan Awalia", gender: "Male" },
-      { name: "T. Nurul Assyifa", gender: "Female" },
-      { name: "Talitha Aqilah Maheswari", gender: "Female" },
-      { name: "Zahra Juneeta Arna", gender: "Female" },
-      { name: "Aliyah", gender: "Female" },
-    ];
-    const students = await Promise.all(
-      studentData.map((s, i) =>
-        db.student.create({
-          data: {
-            name: s.name,
-            studentId: `STU${String(i + 1).padStart(3, "0")}`,
-            className: "7.3",
-            gender: s.gender,
-            status: "active",
-          },
-        })
-      )
-    );
+    // Create class
+    const classInfo = await db.classInfo.create({
+      data: {
+        name: "Kelas 7.3",
+        description: "Kelas terbaik di sekolah",
+        year: "2024/2025",
+        semester: "Ganjil",
+        isActive: true,
+      },
+    });
 
-    // Create schedules
-    const schedules = await Promise.all([
-      db.schedule.create({
+    // Add class members with positions
+    const classMembers = await Promise.all([
+      // Ketua Kelas
+      db.classMember.create({
         data: {
-          title: "Mathematics",
-          subject: "Mathematics",
-          day: "Monday",
-          startTime: "08:00",
-          endTime: "09:30",
-          room: "Room 101",
-          teacherName: "Dr. Smith",
-          color: "#ef4444",
+          userId: admin.id,
+          classId: classInfo.id,
+          position: "KETUA_KELAS",
+          number: 1,
+          status: "active",
         },
       }),
-      db.schedule.create({
+      // Wakil Ketua
+      db.classMember.create({
         data: {
-          title: "Physics",
-          subject: "Physics",
-          day: "Monday",
-          startTime: "10:00",
-          endTime: "11:30",
-          room: "Lab 201",
-          teacherName: "Prof. Johnson",
-          color: "#22c55e",
+          userId: designer.id,
+          classId: classInfo.id,
+          position: "WAKIL_KETUA",
+          number: 2,
+          status: "active",
         },
       }),
-      db.schedule.create({
+      // Sekretaris
+      db.classMember.create({
         data: {
-          title: "English Literature",
-          subject: "English",
-          day: "Tuesday",
-          startTime: "08:00",
-          endTime: "09:30",
-          room: "Room 102",
-          teacherName: "Ms. Williams",
-          color: "#3b82f6",
+          userId: sekretaris.id,
+          classId: classInfo.id,
+          position: "SEKRETARIS",
+          number: 3,
+          status: "active",
         },
       }),
-      db.schedule.create({
+      // Bendahara
+      db.classMember.create({
         data: {
-          title: "Chemistry",
-          subject: "Chemistry",
-          day: "Tuesday",
-          startTime: "10:00",
-          endTime: "11:30",
-          room: "Lab 202",
-          teacherName: "Dr. Brown",
-          color: "#f59e0b",
+          userId: bendahara.id,
+          classId: classInfo.id,
+          position: "BENDAHARA",
+          number: 4,
+          status: "active",
         },
       }),
-      db.schedule.create({
+      // Regular member
+      db.classMember.create({
         data: {
-          title: "Computer Science",
-          subject: "Computer Science",
-          day: "Wednesday",
-          startTime: "08:00",
-          endTime: "09:30",
-          room: "Computer Lab",
-          teacherName: "Mr. Davis",
-          color: "#8b5cf6",
-        },
-      }),
-      db.schedule.create({
-        data: {
-          title: "History",
-          subject: "History",
-          day: "Wednesday",
-          startTime: "10:00",
-          endTime: "11:30",
-          room: "Room 103",
-          teacherName: "Mrs. Taylor",
-          color: "#ec4899",
-        },
-      }),
-      db.schedule.create({
-        data: {
-          title: "Biology",
-          subject: "Biology",
-          day: "Thursday",
-          startTime: "08:00",
-          endTime: "09:30",
-          room: "Lab 203",
-          teacherName: "Dr. Wilson",
-          color: "#14b8a6",
-        },
-      }),
-      db.schedule.create({
-        data: {
-          title: "Art & Design",
-          subject: "Art",
-          day: "Friday",
-          startTime: "08:00",
-          endTime: "10:00",
-          room: "Art Studio",
-          teacherName: "Ms. Anderson",
-          color: "#f97316",
+          userId: member.id,
+          classId: classInfo.id,
+          position: "MEMBER",
+          number: 5,
+          status: "active",
         },
       }),
     ]);
 
-    // Create announcements
+    // Create sample payments
+    const payments = await Promise.all([
+      db.payment.create({
+        data: {
+          title: "Iuran SPP September",
+          amount: 50000,
+          type: "REGULAR",
+          status: "PENDING",
+          dueDate: new Date("2024-09-30"),
+          description: "Iuran bulanan untuk keperluan kelas",
+          classId: classInfo.id,
+          memberPaidBy: classMembers[4].id,
+        },
+      }),
+      db.payment.create({
+        data: {
+          title: "Kas Kas Kelas",
+          amount: 25000,
+          type: "SPECIAL",
+          status: "PAID",
+          dueDate: new Date("2024-09-15"),
+          paidDate: new Date("2024-09-14"),
+          paymentMethod: "Transfer",
+          description: "Kas tambahan untuk acara 17 Agustus",
+          classId: classInfo.id,
+          memberPaidBy: classMembers[3].id,
+          paidBy: bendahara.id,
+        },
+      }),
+    ]);
+
+    // Create sample activities
+    const activities = await Promise.all([
+      db.activity.create({
+        data: {
+          title: "Rapat Rutinan Bulanan",
+          description: "Rapat untuk membahas program bulan ini",
+          type: "MEETING",
+          date: new Date("2024-09-20"),
+          location: "Ruang Kelas 7.3",
+          status: "PLANNED",
+          budget: 100000,
+          actualCost: null,
+          classId: classInfo.id,
+          organizerId: admin.id,
+          participants: [admin.id, designer.id, sekretaris.id, bendahara.id],
+        },
+      }),
+      db.activity.create({
+        data: {
+          title: "Study Tour ke Museum",
+          description: "Kunjungan edukatif ke museum nasional",
+          type: "ACADEMIC",
+          date: new Date("2024-10-05"),
+          location: "Museum Nasional Jakarta",
+          status: "PLANNED",
+          budget: 500000,
+          actualCost: null,
+          classId: classInfo.id,
+          organizerId: designer.id,
+          participants: [],
+        },
+      }),
+    ]);
+
+    // Create sample announcements
     const announcements = await Promise.all([
       db.announcement.create({
         data: {
-          title: "Welcome to Class 7.3",
-          content:
-            "Welcome to the Class 7.3 website! This platform helps students, teachers, and administrators stay connected and organized. Explore all features and contact us if you have any questions.",
+          title: "Pengumuman: Libur Semester Ganjil",
+          content: "Diberitahukan kepada seluruh siswa kelas 7.3 bahwa libur semester ganjil akan dimulai pada tanggal 23 Desember 2024.",
+          type: "GENERAL",
           priority: "high",
           isPinned: true,
+          status: "ACTIVE",
+          classId: classInfo.id,
           authorId: admin.id,
+          tags: ["libur", "semester", "pengumuman"],
+          expiresAt: new Date("2024-12-31"),
         },
       }),
       db.announcement.create({
         data: {
-          title: "Mid-Term Examination Schedule",
-          content:
-            "Mid-term examinations will be held from March 15th to March 22nd. Check the schedule section for detailed timing. Arrive 15 minutes before the scheduled time.",
-          priority: "high",
-          isPinned: true,
-          authorId: admin.id,
-        },
-      }),
-      db.announcement.create({
-        data: {
-          title: "Parent-Teacher Meeting",
-          content:
-            "Parent-teacher meeting is scheduled for Saturday, March 25th from 9:00 AM to 1:00 PM. Parents are requested to attend to discuss their child's progress.",
+          title: "Pembayaran SPP Bulan Oktober",
+          content: "Seluruh siswa diharapkan melunaskan pembayaran SPP bulan Oktober paling lambat tanggal 31 Oktober 2024.",
+          type: "FINANCIAL",
           priority: "normal",
           isPinned: false,
-          authorId: designer.id,
-        },
-      }),
-      db.announcement.create({
-        data: {
-          title: "Science Fair Registration Open",
-          content:
-            "Registration for the annual science fair is now open! Students from all classes are encouraged to participate. The fair will be held on April 10th.",
-          priority: "normal",
-          isPinned: false,
-          authorId: admin.id,
+          status: "ACTIVE",
+          classId: classInfo.id,
+          authorId: bendahara.id,
+          tags: ["pembayaran", "spp", "oktober"],
         },
       }),
     ]);
 
-    // Create teachers
-    const teachers = await Promise.all([
-      db.teacher.create({
+    // Create sample schedules
+    const schedules = await Promise.all([
+      db.schedule.create({
         data: {
-          name: "Dr. Robert Smith",
-          email: "r.smith@school.edu",
-          phone: "+1 234-567-1001",
-          subject: "Mathematics",
-          position: "Head of Mathematics Department",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=rsmith",
-          bio: "Ph.D. in Applied Mathematics from MIT. 15 years of teaching experience. Specializes in calculus and linear algebra.",
+          title: "Matematika",
+          description: "Pelajaran Matematika dengan Pak Budi",
+          type: "LESSON",
+          date: new Date("2024-09-16"),
+          startTime: "07:00",
+          endTime: "08:30",
+          location: "Ruang Kelas 7.3",
+          status: "SCHEDULED",
+          classId: classInfo.id,
         },
       }),
-      db.teacher.create({
+      db.schedule.create({
         data: {
-          name: "Prof. Sarah Johnson",
-          email: "s.johnson@school.edu",
-          phone: "+1 234-567-1002",
-          subject: "Physics",
-          position: "Senior Physics Teacher",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sjohnson",
-          bio: "M.Sc. in Physics from Stanford. 12 years of teaching experience. Passionate about making physics accessible to all students.",
-        },
-      }),
-      db.teacher.create({
-        data: {
-          name: "Ms. Emily Williams",
-          email: "e.williams@school.edu",
-          phone: "+1 234-567-1003",
-          subject: "English Literature",
-          position: "English Department Head",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=ewilliams",
-          bio: "M.A. in English Literature from Oxford. 10 years of teaching experience. Published author of two poetry collections.",
-        },
-      }),
-      db.teacher.create({
-        data: {
-          name: "Dr. Michael Brown",
-          email: "m.brown@school.edu",
-          phone: "+1 234-567-1004",
-          subject: "Chemistry",
-          position: "Chemistry Teacher",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mbrown",
-          bio: "Ph.D. in Organic Chemistry from Caltech. 8 years of teaching experience. Research focus on sustainable chemistry.",
-        },
-      }),
-      db.teacher.create({
-        data: {
-          name: "Mr. David Davis",
-          email: "d.davis@school.edu",
-          phone: "+1 234-567-1005",
-          subject: "Computer Science",
-          position: "Technology Coordinator",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=ddavis",
-          bio: "M.S. in Computer Science from Carnegie Mellon. 6 years of teaching experience. Former software engineer at Google.",
-        },
-      }),
-      db.teacher.create({
-        data: {
-          name: "Mrs. Jennifer Taylor",
-          email: "j.taylor@school.edu",
-          phone: "+1 234-567-1006",
-          subject: "History",
-          position: "Social Studies Teacher",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jtaylor",
-          bio: "M.A. in History from Yale. 14 years of teaching experience. Specializes in American and World History.",
-        },
-      }),
-    ]);
-
-    // Create class structure
-    const structures = await Promise.all([
-      db.classStructure.create({
-        data: {
-          name: "School Administration",
-          position: "Administration",
-          description: "Overall management and leadership of the school",
-          order: 1,
-        },
-      }),
-      db.classStructure.create({
-        data: {
-          name: "Principal",
-          position: "Head of School",
-          description:
-            "Chief administrative officer responsible for all school operations",
-          order: 2,
-        },
-      }),
-      db.classStructure.create({
-        data: {
-          name: "Vice Principal",
-          position: "Academic Affairs",
-          description: "Oversees curriculum and academic programs",
-          order: 3,
-        },
-      }),
-      db.classStructure.create({
-        data: {
-          name: "Academic Departments",
-          position: "Department Heads",
-          description: "Leaders of various academic departments",
-          order: 4,
-        },
-      }),
-      db.classStructure.create({
-        data: {
-          name: "Teaching Staff",
-          position: "Teachers",
-          description: "Dedicated educators for all subjects",
-          order: 5,
-        },
-      }),
-      db.classStructure.create({
-        data: {
-          name: "Student Council",
-          position: "Student Leadership",
-          description: "Elected student representatives",
-          order: 6,
+          title: "Rapat OSIS",
+          description: "Rapat rutinan OSIS kelas 7.3",
+          type: "MEETING",
+          date: new Date("2024-09-20"),
+          startTime: "13:00",
+          endTime: "14:00",
+          location: "Ruang OSIS",
+          status: "SCHEDULED",
+          classId: classInfo.id,
         },
       }),
     ]);
@@ -367,35 +272,19 @@ export async function GET() {
     return NextResponse.json({
       message: "Database seeded successfully",
       data: {
-        users: {
-          admin1: { email: admin.email, role: admin.role },
-          admin2: { email: designer.email, role: designer.role },
-          member: { email: member.email, verified: false },
-        },
-        students: students.length,
-        schedules: schedules.length,
-        announcements: announcements.length,
-        teachers: teachers.length,
-        structures: structures.length,
+        users: 5,
+        class: 1,
+        members: 5,
+        payments: 2,
+        activities: 2,
+        announcements: 2,
+        schedules: 2,
       },
     });
-  } catch (error) {
-    console.error("Seed error:", error);
-    const message = error instanceof Error ? error.message : String(error);
-    const code = error && typeof error === "object" && "code" in error ? (error as { code?: string }).code : null;
+  } catch (error: any) {
+    console.error("Seeding error:", error);
     return NextResponse.json(
-      {
-        error: "Failed to seed database",
-        details: message,
-        ...(code && { code }),
-        hint: !process.env.DATABASE_URL
-          ? "DATABASE_URL not set in Vercel Environment Variables"
-          : code === "P2021"
-          ? "Run: npx prisma db push (with same DATABASE_URL as Vercel)"
-          : code === "P1001"
-          ? "Check DATABASE_URL - can't reach Neon. Use pooled URL (-pooler) for Vercel."
-          : undefined,
-      },
+      { error: "Failed to seed database", details: error.message },
       { status: 500 }
     );
   }

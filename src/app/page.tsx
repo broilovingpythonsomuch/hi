@@ -37,6 +37,7 @@ import {
   Chrome,
   Github,
   Facebook,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,58 +55,92 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Types
-interface Student {
+interface User {
   id: string;
   name: string;
-  email: string | null;
-  phone: string | null;
-  studentId: string;
-  className: string;
-  address: string | null;
-  gender: string | null;
-  status: string;
+  email: string;
+  role: string;
   avatar: string | null;
-  createdAt: string;
+  emailVerified: boolean;
 }
 
-interface Schedule {
+interface ClassInfo {
+  id: string;
+  name: string;
+  description: string | null;
+  year: string;
+  semester: string;
+  isActive: boolean;
+  createdAt: string;
+  members: ClassMember[];
+  _count: {
+    members: number;
+    payments: number;
+    activities: number;
+    announcements: number;
+  };
+}
+
+interface ClassMember {
+  id: string;
+  userId: string;
+  classId: string;
+  position: string;
+  number: number | null;
+  status: string;
+  joinedAt: string;
+  user: User;
+}
+
+interface Payment {
   id: string;
   title: string;
-  subject: string;
-  day: string;
-  startTime: string;
-  endTime: string;
-  room: string | null;
-  teacherName: string | null;
-  color: string;
+  amount: number;
+  type: string;
+  status: string;
+  dueDate: string;
+  paidDate: string | null;
+  paymentMethod: string | null;
+  description: string | null;
+  createdAt: string;
+  member?: ClassMember;
+}
+
+interface Activity {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+  date: string;
+  location: string | null;
+  status: string;
+  budget: number | null;
+  actualCost: number | null;
+  createdAt: string;
 }
 
 interface Announcement {
   id: string;
   title: string;
   content: string;
+  type: string;
   priority: string;
   isPinned: boolean;
+  status: string;
   createdAt: string;
+  authorId: string;
 }
 
-interface Teacher {
+interface Schedule {
   id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  subject: string;
-  position: string | null;
-  avatar: string | null;
-  bio: string | null;
-}
-
-interface ClassStructure {
-  id: string;
-  name: string;
-  position: string;
+  title: string;
   description: string | null;
-  order: number;
+  type: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string | null;
+  status: string;
 }
 
 // Main Component
@@ -116,10 +151,13 @@ export default function ClassManagementPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Data states
-  const [students, setStudents] = useState<Student[]>([]);
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
+  const [members, setMembers] = useState<ClassMember[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [structures, setStructures] = useState<ClassStructure[]>([]);
 
   // Dialog states
@@ -395,7 +433,8 @@ export default function ClassManagementPage() {
                 <div className="space-y-4">
                   {/* Social Login Buttons */}
                   <div className="space-y-2">
-                    <Button
+                    {/* Google OAuth disabled - Cloud Platform restricted */}
+                    {/* <Button
                       type="button"
                       variant="outline"
                       className="w-full"
@@ -404,7 +443,7 @@ export default function ClassManagementPage() {
                     >
                       <Chrome className="w-4 h-4 mr-2" />
                       Continue with Google
-                    </Button>
+                    </Button> */}
                     <Button
                       type="button"
                       variant="outline"
@@ -424,6 +463,16 @@ export default function ClassManagementPage() {
                     >
                       <Facebook className="w-4 h-4 mr-2" />
                       Continue with Facebook
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => signIn("discord", { callbackUrl: "/" })}
+                      disabled={isLoading}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Continue with Discord
                     </Button>
                   </div>
 
@@ -496,7 +545,8 @@ export default function ClassManagementPage() {
                 <div className="space-y-4">
                   {/* Social Signup Buttons */}
                   <div className="space-y-2">
-                    <Button
+                    {/* Google OAuth disabled - Cloud Platform restricted */}
+                    {/* <Button
                       type="button"
                       variant="outline"
                       className="w-full"
@@ -505,7 +555,7 @@ export default function ClassManagementPage() {
                     >
                       <Chrome className="w-4 h-4 mr-2" />
                       Sign up with Google
-                    </Button>
+                    </Button> */}
                     <Button
                       type="button"
                       variant="outline"
@@ -525,6 +575,16 @@ export default function ClassManagementPage() {
                     >
                       <Facebook className="w-4 h-4 mr-2" />
                       Sign up with Facebook
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => signIn("discord", { callbackUrl: "/" })}
+                      disabled={isLoading}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Sign up with Discord
                     </Button>
                   </div>
 
@@ -2153,6 +2213,7 @@ export default function ClassManagementPage() {
   }
 
   // Not authenticated
+  
   if (!session) {
     return <AuthForm />;
   }
